@@ -230,6 +230,7 @@ class Game {
   pause() {
     if (this.state !== 'playing') return;
     this.state = 'paused';
+    this.pausedAt = performance.now();
     this.menu.showPause();
     if (document.pointerLockElement) document.exitPointerLock();
   }
@@ -267,7 +268,7 @@ class Game {
       if (['Tab', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(k)) e.preventDefault();
       if (k === 'Escape') {
         if (this.state === 'playing') this.pause();
-        else if (this.state === 'paused' && !this.menu.inSubmenu) this.resume();
+        else if (this.state === 'paused' && !this.menu.inSubmenu) { if (performance.now() - this.pausedAt > 400) this.resume(); }
         else this.menu.back();
         return;
       }
@@ -405,7 +406,7 @@ class Game {
     W.fx.update(dt, W.scene.fog.density, 0.35 + Math.min(1, lf) * 0.8);
     this.audio.setListener(cam.position.x, cam.position.y, cam.position.z, cam.rotation.y);
     // weapon view
-    const showWeapon = !p.dead && this.state !== 'title' && !this.attract;
+    const showWeapon = !p.dead && this.state !== 'title' && !this.attract && !this.automap;
     this.viewWeapon.root.visible = showWeapon;
     if (showWeapon) {
       const barLift = this.hud.barHeight / window.innerHeight;

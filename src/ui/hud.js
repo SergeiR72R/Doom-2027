@@ -336,7 +336,7 @@ export class HUD {
     const L = world.level;
     const barH = opts.showBar ? this.barHeight : 0;
     const H = this.h - barH;
-    g.fillStyle = 'rgba(0,0,0,0.86)';
+    g.fillStyle = 'rgba(0,0,0,0.97)';
     g.fillRect(0, 0, this.w, H);
     g.save();
     g.beginPath(); g.rect(0, 0, this.w, H); g.clip();

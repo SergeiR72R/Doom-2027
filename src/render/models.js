@@ -39,6 +39,39 @@ function std(color, rough = 0.7, metal = 0.0, extra = {}) {
 function glow(color, intensity = 2.5) {
   return new THREE.MeshStandardMaterial({ color: 0x000000, emissive: color, emissiveIntensity: intensity, roughness: 0.5 });
 }
+// small tiling grain textures (skin pores / fabric weave) so models aren't plastic-smooth
+function grainTexture(kind) {
+  const n = 128;
+  const c = document.createElement('canvas');
+  c.width = c.height = n;
+  const g = c.getContext('2d');
+  const id = g.createImageData(n, n);
+  let seed = kind === 'cloth' ? 11 : 5;
+  const r = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const val = new Float32Array(n * n);
+  for (let i = 0; i < n * n; i++) val[i] = r();
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    let v;
+    if (kind === 'cloth') {
+      const w = ((x % 4) < 2) !== ((y % 4) < 2) ? 0.62 : 0.5;
+      v = w + (val[y * n + x] - 0.5) * 0.25;
+    } else {
+      // blotchy skin: blurred noise + pores
+      let a = 0;
+      for (let k = -2; k <= 2; k++) a += val[((y + k + n) % n) * n + ((x + k * 3 + n) % n)];
+      v = 0.55 + (a / 5 - 0.5) * 0.5 + (val[y * n + x] > 0.93 ? -0.25 : 0);
+    }
+    const b = Math.max(0, Math.min(255, v * 255));
+    const o = (y * n + x) * 4;
+    id.data[o] = id.data[o + 1] = id.data[o + 2] = b; id.data[o + 3] = 255;
+  }
+  g.putImageData(id, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(3, 3);
+  return t;
+}
+
 function initMaterials() {
   if (M.ready) return;
   M.ready = true;
@@ -79,6 +112,11 @@ function initMaterials() {
   M.gArmor = std(0x3d8a2c, 0.35, 0.6, { emissive: 0x0c3a06, emissiveIntensity: 1 });
   M.bArmor = std(0x2a4ab8, 0.35, 0.6, { emissive: 0x0a1650, emissiveIntensity: 1 });
   M.ammoBox = std(0x4a4a2a, 0.7, 0.2);
+  const skinBump = grainTexture('skin'), clothBump = grainTexture('cloth');
+  for (const k of ['zSkin', 'sSkin', 'impSkin', 'impBelly', 'marineSkin', 'flesh']) { M[k].bumpMap = skinBump; M[k].bumpScale = 1.6; }
+  for (const k of ['zShirt', 'zPants', 'sPants', 'sArmor', 'marineGreen', 'glove', 'belt']) { M[k].bumpMap = clothBump; M[k].bumpScale = 1.2; }
+  M.zSkin.color.set(0x8f7b68);
+  M.redEye.emissiveIntensity = 2.5;
 }
 
 function capsule(r, len, mat, seg = 10) {
